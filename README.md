@@ -3,6 +3,14 @@ Data Professionals Salary in India - 2022
 Darwin Herrera C.
 7/2/2022
 
+# Data
+
+The data is obtained from kaggle
+[dataset](https://www.kaggle.com/iamsouravbanerjee/analytics-industry-salaries-2022-india)
+from user @[iamsouravbanerjee](https://www.kaggle.com/iamsouravbanerjee)
+my notebook is
+[this](https://www.kaggle.com/darwinhc/data-professionals-salary-in-india-2022/data)
+
 ``` r
 df <- read.csv('Salary Dataset.csv')
 ```
@@ -178,15 +186,14 @@ contracts of employment and other official documents. Q&A: What Is an
 Associate? (2021, 9 junio). Indeed Career Guide.
 <https://www.indeed.com/career-advice/finding-a-job/associate-position>
 
-    ## # A tibble: 6 × 2
-    ##   Company.Name  jobs                               
-    ##   <chr>         <chr>                              
-    ## 1 Amazon        Machine Learning Data Associate    
-    ## 2 Amazon        Machine Learning Data Associate I  
-    ## 3 Amazon        Machine Learning Associate         
-    ## 4 Amazon        Machine Learning Data Associate II 
-    ## 5 Techolution   Associate Machine Learning Engineer
-    ## 6 ZS Associates Data Science Associate
+| Company.Name  | jobs                                |
+|:--------------|:------------------------------------|
+| Amazon        | Machine Learning Data Associate     |
+| Amazon        | Machine Learning Data Associate I   |
+| Amazon        | Machine Learning Associate          |
+| Amazon        | Machine Learning Data Associate II  |
+| Techolution   | Associate Machine Learning Engineer |
+| ZS Associates | Data Science Associate              |
 
 We recognize which companies use this term and only 3 companies use this
 term Amazon, Techolution, ZS Associates.

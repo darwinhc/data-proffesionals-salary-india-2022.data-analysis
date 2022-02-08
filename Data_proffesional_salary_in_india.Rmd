@@ -15,8 +15,8 @@ library(grid)
 library(gridExtra)
 ```
 
-
-
+# Data
+The data is obtained from kaggle [dataset](https://www.kaggle.com/iamsouravbanerjee/analytics-industry-salaries-2022-india) from user @[iamsouravbanerjee](https://www.kaggle.com/iamsouravbanerjee) my notebook is [this](https://www.kaggle.com/darwinhc/data-professionals-salary-in-india-2022/data)
 ```{r}
 df <- read.csv('Salary Dataset.csv')
 ```
@@ -158,7 +158,7 @@ The word associate shows that the employee has a lower ranking position than the
 
 
 ```{r, echo=F}
-who_use_associate <- subset(company_job, grepl("Associate", jobs)); who_use_associate
+who_use_associate <- subset(company_job, grepl("Associate", jobs)); knitr::kable(who_use_associate)
 ```
 
 We recognize which companies use this term and only `r length(unique(who_use_associate$Company.Name))` companies use this term `r unique(who_use_associate$Company.Name)`.
