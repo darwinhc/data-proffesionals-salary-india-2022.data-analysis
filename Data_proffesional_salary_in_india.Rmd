@@ -2,7 +2,7 @@
 title: "Data Professionals Salary in India - 2022"
 author: "Darwin Herrera C."
 date: "7/2/2022"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -357,20 +357,19 @@ gb_company_job <- df %>% group_by(Company.Name, job_title_unified) %>%
 gb_company_job <- gb_company_job[order(-gb_company_job$mean_ts),]
 gb_company_job$rank <- 1:length(gb_company_job$mean_ts)
 knitr::kable(head(gb_company_job[,c("rank", "Company.Name", "job_title_unified", "mean_ts")], 25))
-````    
+```  
 
 
 ## Ranking by company
 
 ```{r}
-gb_company <- df %>%group_by(df$Company.Name) %>% 
+gb_company <- df %>%group_by(Company.Name) %>% 
   summarise(mean_ts=mean(total_salaries_by_job_title, na.rm=T), .groups = "drop")
 gb_company <- gb_company[order(-gb_company$mean_ts),]
 
 gb_company$rank <- 1:length(gb_company$mean_ts)
-colnames(gb_company) <- c("")
-knitr::kable(head(gb_company[,c("rank", "df$Company.Name", "mean_ts")], 25))
-````    
+knitr::kable(head(gb_company[,c("rank", "Company.Name", "mean_ts")], 25))
+```
 
 
 If you read this and from India I hope you are working on one of these ;3
