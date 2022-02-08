@@ -8,8 +8,8 @@ Darwin Herrera C.
 The data is obtained from kaggle
 [dataset](https://www.kaggle.com/iamsouravbanerjee/analytics-industry-salaries-2022-india)
 from user @[iamsouravbanerjee](https://www.kaggle.com/iamsouravbanerjee)
-my notebook is
-[this](https://www.kaggle.com/darwinhc/data-professionals-salary-in-india-2022/data)
+my report is
+[this](https://www.kaggle.com/darwinhc/data-professionals-salary-in-india-2022/report)
 
 ``` r
 df <- read.csv('Salary Dataset.csv')
