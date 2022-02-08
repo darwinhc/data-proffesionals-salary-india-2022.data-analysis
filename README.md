@@ -31,6 +31,19 @@ minimum_wages_per_day_inr <- 178 # https://tradingeconomics.com/india/minimum-wa
 Cleaning the data and creating columns that expand the useful
 information
 
+Where we first identify the currency, since different currencies were
+found, then we separate the reference time for the salary payments, then
+we obtain the salary number without units or reference times, and
+finally we estimate the monthly salary, which will serve as an indicator
+of the salary per person.
+
+salarypermonth = salaryperyear/12
+
+salarypermonth = salaryperhour\*8\*5\*4
+
+And the change of the currency was made in this way
+*salary/exchangerate*
+
 ``` r
 df$salary_currency <- substr(df$Salary, 1, 1)
 df$salary_currency <- ifelse(startsWith(df$Salary, "AFN"), "AFN", df$salary_currency)
