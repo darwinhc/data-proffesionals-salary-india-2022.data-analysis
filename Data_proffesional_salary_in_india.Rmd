@@ -1,0 +1,378 @@
+---
+title: "Data Professionals Salary in India - 2022"
+author: "Darwin Herrera C."
+date: "7/2/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, warning=F)
+library(ggplot2)
+library(DataExplorer)
+library(stringr)
+library(dplyr)
+library(grid)
+library(gridExtra)
+```
+
+
+
+```{r}
+df <- read.csv('Salary Dataset.csv')
+```
+
+
+# Parameters
+This data was extracted from the Internet on February 7, 2022.
+```{r, warning=F}
+exchange_rate_usd_inr <- 0.0134 # https://www.google.com/finance/quote/INR-USD
+exchange_rate_eur_inr <- 0.0117 # https://www.google.com/finance/quote/INR-EUR
+exchange_rate_afn_inr <- 1.2742 # https://www.google.com/finance/quote/INR-AFN
+minimum_wages_per_day_inr <- 178 # https://tradingeconomics.com/india/minimum-wages
+```
+
+# Cleaning data
+
+Cleaning the data and creating columns that expand the useful information
+
+```{r, warning=F}
+df$salary_currency <- substr(df$Salary, 1, 1)
+df$salary_currency <- ifelse(startsWith(df$Salary, "AFN"), "AFN", df$salary_currency)
+
+df$payment_per <- substr(df$Salary, nchar(df$Salary)-1, nchar(df$Salary))
+df$salary <- as.numeric(str_remove_all(substr(df$Salary, 2, nchar(df$Salary)-3), ","))
+df$salary <- ifelse(df$salary_currency == "AFN", as.numeric(str_remove_all(substr(df$Salary, 4, nchar(df$Salary)-3), ",")), df$salary)
+
+df$estimated_monthly_salary_inr <- ifelse(df$payment_per == "yr", as.numeric(df$salary)/12, 
+                                   ifelse(df$payment_per == 'hr', as.numeric(df$salary)*8*5*4, as.numeric(df$salary)))
+df$estimated_monthly_salary_inr <- ifelse(df$salary_currency == "$", df$estimated_monthly_salary_inr/exchange_rate_usd_inr,
+                                   ifelse(df$salary_currency == "£", df$estimated_monthly_salary_inr/exchange_rate_eur_inr,
+                                   ifelse(df$salary_currency == "AFN", df$estimated_monthly_salary_inr/exchange_rate_afn_inr, df$estimated_monthly_salary_inr)))
+df$estimated_monthly_salary_usd <- df$estimated_monthly_salary_inr*exchange_rate_usd_inr
+```
+
+
+
+# Description of the observations in the data
+```{r}
+knitr::kable(t(introduce(df)))
+```
+
+
+
+```{r}
+plot_intro(df)
+```
+
+The data looks good, since it does not need so much data, however, it gives us quite complex information, such as the job title and salary, which we must analyze and separate later.
+
+
+```{r, warning=F, fig.width=10, fig.height=12}
+plot_bar(df[,c("Job.Title", "Location")], ncol = 1)
+```
+
+
+# Estimated salaries per month in USD
+
+We cut the data a little bit, only for visualization purposes.
+
+
+```{r, warning=F}
+ggplot(df, aes(x=estimated_monthly_salary_usd)) + 
+  xlab("USD") + ylab("Frequency") + geom_histogram(binwidth=100, fill='darkblue', alpha = 0.8) +  
+  xlim(0, 10000) + 
+  ggtitle("Estimated salaries of data professionals per month") 
+```
+
+We found a lot of atypical data, after 10000 USD, not shown in the previous visualization, so they are detailed below
+
+```{r, echo=F}
+df$Location = factor(df$Location,levels=names(sort(table(df$Location), decreasing=T)))
+knitr::kable(subset(df, estimated_monthly_salary_usd >= 10000)[,c("Company.Name", "Salary", "Job.Title", "estimated_monthly_salary_usd")])
+```
+
+
+# Location analysis  
+
+
+```{r, warning=F, fig.width=7, fig.height=10}
+p1 <- ggplot(df, aes(x=estimated_monthly_salary_inr*exchange_rate_usd_inr,y=Location, 
+               fill=Location, color=Location)) + 
+  theme(axis.ticks = element_blank(), 
+        axis.text.x = element_blank(), legend.position = "none", 
+        axis.title.x = element_blank(), axis.title.y = element_blank()) + geom_boxplot(alpha=0.4) +
+  ggtitle("Estimated salaries of data professionals per month by location in india") + 
+  xlim(0, 20000) +
+  xlab("USD (price feb 2022)")
+p2 <- ggplot(df, aes(x=estimated_monthly_salary_inr*exchange_rate_usd_inr, 
+               fill=Location, color=Location)) + xlim(0, 20000) +
+  theme(legend.position = c(0.8, 0.8)) + geom_density(alpha=0.4) +
+  xlab("USD (price feb 2022)") + ylab("Frequency") 
+
+grid.newpage()
+grid.draw(rbind(ggplotGrob(p1), ggplotGrob(p2), size = "last"))
+```
+
+```{r, warning=T, echo=F}
+summary_grouping_by_location <- df %>% group_by(Location) %>% 
+  summarise(#mean_inr= mean(estimated_monthly_salary_inr, na.rm = T),
+            #dev_inr=sd(estimated_monthly_salary_inr, na.rm=T), 
+            mean_usd= mean(estimated_monthly_salary_inr, na.rm = T)*exchange_rate_usd_inr, 
+            dev_usd=sd(estimated_monthly_salary_inr, na.rm=T)*exchange_rate_usd_inr)
+knitr::kable(summary_grouping_by_location, 
+             col.names = gsub("[.]", " ", names(summary_grouping_by_location)))
+```
+
+
+According to this we can say that the location almost does not matter, their distributions are very similar, New Delhi and Mumbai are the only ones that lag behind in the mean.
+
+# Currency
+
+```{r, warning=F, echo=F}
+ggplot(df, aes(x=estimated_monthly_salary_usd, color=salary_currency, y=salary_currency )) + 
+  geom_boxplot() + theme(legend.position = "none") + 
+  xlab("Mean monthly salaries (USD)") +
+  ylab("Salary currency") + #xlim(0, 60000) +
+  ggtitle("Comparison of mean with cost-of-living index by location")
+```
+
+
+We can see that people who receive their salaries in another currency, receive more than the rest, this may be due to the company they work with. So, if it is important where the company is from and the currency in which you are paid
+
+
+
+# Job title  
+
+```{r, fig.width=8, fig.height=7, warning=F}
+company_job <- df %>% group_by(Company.Name) %>% summarise(jobs=unique(Job.Title), .groups = "drop")
+ggplot(company_job, aes(x=jobs)) + geom_bar() + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + coord_flip()
+```
+
+There are too many simulated professions but with different names, so let's classify them to better analyze them.
+
+## Cleaning
+### What is an associate ?
+
+The word associate shows that the employee has a lower ranking position than their colleagues who do not have the term in the same title. For example, an associate manager has a little less seniority than a manager. You will see the term associate used on job descriptions, contracts of employment and other official documents. Q&A: What Is an Associate? (2021, 9 junio). Indeed Career Guide. https://www.indeed.com/career-advice/finding-a-job/associate-position
+
+
+```{r, echo=F}
+who_use_associate <- subset(company_job, grepl("Associate", jobs)); who_use_associate
+```
+
+We recognize which companies use this term and only `r length(unique(who_use_associate$Company.Name))` companies use this term `r unique(who_use_associate$Company.Name)`.
+
+```{r, echo=F}
+ggplot(subset(company_job, is.element(Company.Name, unique(who_use_associate$Company.Name)) & 
+                !is.element(jobs, unique(who_use_associate$jobs))),
+       aes(y=jobs, x=Company.Name)) + geom_point(color="darkblue") + 
+  ylab("Job title") + xlab("Company name") + ggtitle("Other job titles that companies use when they use associate")
+```
+
+### Unification
+
+
+
+First, let's clarify that data scientist and data science are the same thing, only the name is different. Also that the adjectives lead and manager refer to leadership positions. 
+However, we look for companies that use certain terms that we hardly know.
+
+And as we can see in some articles there are 3 main branches of jobs that people in this field can take. (Johari, A. (2020, 25 noviembre). Data Analyst vs Data Engineer vs Data Scientist: Skills, Responsibilities, Salary. Edureka. https://www.edureka.co/blog/data-analyst-vs-data-engineer-vs-data-scientist/)
+
+But there are some job titles in which they touch on topics related to one of the above, but they focus on something very specific such as machine learning engineers which is part of data scientist according to (Machine Learning Engineer vs. Data Scientist. (n. d.). Snowflake. https://www.snowflake.com/trending/machine-learning-engineer-vs-data-scientist), so we are going to create a new column called specialization.
+
+Finally, job titles that are ancillary to other positions, such as consultants, associates or developers will be classified as assistants.  
+
+
+| Job title | Unification name | Level | Leadership position | Specialization |
+| --------- | ---------------- | ----- | ------------------- | --------------- |
+| Lead Data Scientist | Data Scientist | NA | TRUE | NA |
+| Data Scientist | Data Scientist | NA | FALSE | NA |
+| Data Science | Data Scientist | NA | FALSE | NA |
+| Data Science Lead | Data Scientist | NA | TRUE | NA |
+| Data Science Manager | Data Scientist | NA | TRUE | NA |
+| Senior Data Scientist | Data Scientist | Senior | FALSE | NA |
+| Junior Data Scientist | Data Scientist | Junior | FALSE | NA |
+| Data Scientist - Trainee | Data Scientist | Trainee | FALSE | NA |
+| Senior Machine Learning Engineer | Data Scientist | Senior | FALSE | Machine learning |
+| Machine Learning Engineer | Data Scientist | NA | FALSE | Machine learning |
+| Software Engineer - Machine Learning | Assistant | NA | FALSE | Machine learning |
+| Machine Learning Software Engineer | Assistant | NA | FALSE | Machine learning |
+| Machine Learning Scientist | Data Scientist | NA | FALSE | Machine learning |
+| Machine Learning Developer | Assistant | NA | FALSE | Machine learning |
+| Machine Learning Data Analyst | Data Analyst | NA | FALSE | Machine learning |
+| Data Analyst | Data Analyst | NA | FALSE | NA |
+| Machine Learning Associate	 | Assistant | NA | FALSE | Machine learning |
+| Machine Learning Data Associate	 | Assistant | NA | FALSE | Machine learning |
+| Machine Learning Data Associate I	 | Assistant | NA | FALSE | Machine learning |
+| Machine Learning Data Associate II	 | Assistant | NA | FALSE | Machine learning |
+| Associate Machine Learning Engineer	 | Assistant | NA | FALSE | Machine learning |
+| Data Science Associate | Assistant | NA | FALSE | Machine learning |
+
+
+Therefore, we proceed as follows
+
+
+```{r, echo=T}
+dschar <- "Data Scientist"
+df$especialization <- ifelse(grepl("Machine Learning", df$Job.Title), "Machine Learning", NA)
+df$leadership_position <- ifelse(grepl("Lead|Manager", df$Job.Title), T, F)
+
+df$job_title_unified <- ifelse(grepl(dschar, df$Job.Title), dschar, 
+                        ifelse(grepl("Data Science|Machine Learning Engineer|Data Science|Machine Learning Scientist", df$Job.Title), dschar, 
+                        ifelse(grepl("Data Analyst", df$Job.Title), "Data Analyst", 
+                        ifelse(grepl("Developer|Software Engineer|Associate|Consultant", df$Job.Title), "Assistant", 
+                        ifelse(grepl("Data Engineer", df$Job.Title), "Data Engineer",
+                               NA)))))
+df$job_title_unified <- factor(df$job_title_unified, levels = c("Assistant", "Data Engineer",  "Data Analyst",  "Data Scientist"))
+
+
+df$level <- ifelse(grepl("Senior", df$Job.Title), "Senior", 
+                   ifelse(grepl("Junior", df$Job.Title), "Junior", 
+                          ifelse(grepl("Trainee", df$Job.Title),"Trainee", "Not classified")))
+df$level <- factor(df$level, levels = c("Senior", "Junior", "Trainee", "Not classified"))
+
+```
+
+## Analysis
+
+
+
+```{r, echo=F}
+ggplot(df, aes(x=job_title_unified)) + geom_bar(fill="darkblue", alpha=0.8) + 
+  ggtitle("Distribution by job title in the companies") + 
+  xlab("Job title") + coord_flip() + ylab("Frequency")
+```
+
+
+We have a very small sample of assistants job titles
+
+
+```{r}
+total_workers <- sum(df$Salaries.Reported, na.rm=T)
+gb_workers <- df %>% group_by(job_title_unified) %>% 
+  summarise(total_workers=sum(Salaries.Reported, na.rm = T))
+gb_workers$prob <- gb_workers$total_workers/total_workers
+ggplot(gb_workers, aes(y=total_workers, x=job_title_unified, fill=job_title_unified)) + 
+  geom_bar(stat="identity") + xlab("Job title") + ylab("Number of employees") +
+  ggtitle("Number of employees by job title") + theme(legend.position = "none")
+```
+
+
+Considering that in the data there is a total of `r total_workers`.
+
+# Level
+
+```{r, echo=F}
+ggplot(subset(df, !level=="Not classified"), aes(level))+ geom_bar(fill="darkblue", alpha=0.8) + 
+  ggtitle("Distribution of classified job titles by level") + ylab("Frequency") +
+  geom_text(x=3, y=30, 
+            label=paste(round(length(df$level[df$level == 'Not classified'])*100/length(df$level), 3), "% of the data\nwere not classified", sep=""))
+```
+
+
+
+
+```{r}
+ggplot(subset(df, !level=="Not classified"), aes(x=estimated_monthly_salary_usd, y=job_title_unified, color=level)) + 
+  geom_boxplot() + theme(legend.position = c(0.9, 0.8)) + xlab("Mean monthly salaries (USD)") + 
+  ylab("Job title") + ggtitle("Level of experience by level compared to estimated salary") + 
+  geom_text(x=3500, y="Data Scientist", label=paste(round(length(df$level[df$level == 'Not classified'])*100/length(df$level), 3), "% of the data\nwere not classified", sep=""), col="black")
+```
+
+Since only `r round(length(df$level[!df$level == 'Not classified'])*100/length(df$level), 3)` of the data was classified, it is complex to draw conclusions from this. It is curious how the trainee position earns slightly more than the average junior.
+
+
+
+```{r, warning=F}
+ggplot(df, aes(x=estimated_monthly_salary_usd, fill=job_title_unified)) + 
+  geom_density(alpha=0.5, col="#00000000") + theme(legend.position = c(0.9, 0.8)) + 
+  xlab("Dollars (USD)") + xlim(0, 7500) + ggtitle("Salary density per month by job title") +
+  guides(fill=guide_legend(title="Job title")) + 
+  geom_text(x=7000, y=0.0005, label=paste(length(df$estimated_monthly_salary_usd[df$estimated_monthly_salary_usd > 7500]), "atypical data ->"))
+```
+
+We observe that most salaries are concentrated below 2000 USD. We also see that the salaries of analysts are highly concentrated below 1000 USD.
+
+Assistants, which are those that include consultants, developers or associates, generate a distribution with two raises.
+
+```{r}
+ggplot(df, aes(x=estimated_monthly_salary_usd, y=salary_currency, color=job_title_unified)) + 
+  geom_boxplot() + theme(legend.position = c(0.9, 0.8)) + xlab("Dollar (USD)") +
+  ylab("Currency") + ggtitle("Estimated monthly salary by currency")
+```
+
+We see that salaries paid in Western currencies are higher than most of those paid in the local currency, reaching very high points, and establishing much higher averages. The euro even outperforms the U.S. dollar. It is clear that the jobs paid in these currencies is because they are foreign companies, which implies that within the country with a weaker currency, the profits are supremely higher.
+
+# Reference time for payment
+
+We are looking for some relationship between the reference time for payment and the estimated monthly salary.
+
+```{r}
+ggplot(df, aes(x=estimated_monthly_salary_usd, y=payment_per, color=job_title_unified)) + 
+  geom_boxplot() + theme(legend.position = c(0.9, 0.8)) + xlab("Dollar (USD)") +
+  ylab("Reference time for payment") + ggtitle("Reference time for payment with estimated monthly salary")
+```
+
+Because we have too much atypical data we zoom on the graph and limit it in the estimated salary between 0 and 15000 USD.
+
+```{r, warning=F}
+ggplot(df, aes(x=estimated_monthly_salary_usd, y=payment_per, color=job_title_unified)) + 
+  geom_boxplot() + theme(legend.position = c(0.9, 0.8)) + xlab("Dollar (USD)") +
+  ylab("Reference time for payment") + ggtitle("Reference time for payment with estimated monthly salary") +
+  xlim(0, 15000)
+```
+
+We observed that people who work hourly as data scientists, according to the calculations we made, have on average higher monthly pay. It is also notable that assistants have jobs with reference time for their salary in years.
+
+
+
+# Mean of salaries by unified job title  
+
+Since the data we obtain is the salary per role, we will now take into account the number of jobs within the same company.
+
+So now, we can say how much on average a person with the following charges could earn
+
+
+```{r}
+df$total_salaries_by_job_title <- df$Salaries.Reported*df$estimated_monthly_salary_usd
+rank_by_job_title <- df %>% group_by(job_title_unified) %>% 
+  summarise(mean=mean(total_salaries_by_job_title, na.rm=T), dev=sd(total_salaries_by_job_title, na.rm = T))
+
+rank_by_job_title <- rank_by_job_title[order(-rank_by_job_title$mean),]
+rank_by_job_title$rank <- 1:length(rank_by_job_title$mean)
+knitr::kable(rank_by_job_title)
+```
+
+
+
+
+# Company
+
+## Ranking by company and job title
+
+```{r}
+gb_company_job <- df %>% group_by(Company.Name, job_title_unified) %>% 
+  summarise(mean_ts=mean(total_salaries_by_job_title, na.rm=T), .groups = "drop")
+gb_company_job <- gb_company_job[order(-gb_company_job$mean_ts),]
+gb_company_job$rank <- 1:length(gb_company_job$mean_ts)
+knitr::kable(head(gb_company_job[,c("rank", "Company.Name", "job_title_unified", "mean_ts")], 25))
+````    
+
+
+## Ranking by company
+
+```{r}
+gb_company <- df %>%group_by(df$Company.Name) %>% 
+  summarise(mean_ts=mean(total_salaries_by_job_title, na.rm=T), .groups = "drop")
+gb_company <- gb_company[order(-gb_company$mean_ts),]
+
+gb_company$rank <- 1:length(gb_company$mean_ts)
+colnames(gb_company) <- c("")
+knitr::kable(head(gb_company[,c("rank", "df$Company.Name", "mean_ts")], 25))
+````    
+
+
+If you read this and from India I hope you are working on one of these ;3
+
+Greetings. I am not a native English speaker, any corrections comment, thanks.
